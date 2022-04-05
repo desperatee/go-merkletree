@@ -260,7 +260,7 @@ var tests = []struct {
 
 func TestNew(t *testing.T) {
 	for i, test := range tests {
-		tree, err := NewUsing(test.data, test.hashType, false)
+		tree, err := NewUsing(test.data, test.hashType, false, false)
 		if test.createErr != nil {
 			assert.Equal(t, test.createErr.Error(), err.Error(), fmt.Sprintf("expected error at test %d", i))
 		} else {
@@ -273,7 +273,7 @@ func TestNew(t *testing.T) {
 func TestString(t *testing.T) {
 	for i, test := range tests {
 		if test.createErr == nil {
-			tree, err := NewUsing(test.data, test.hashType, false)
+			tree, err := NewUsing(test.data, test.hashType, false, false)
 			assert.Nil(t, err, fmt.Sprintf("failed to create tree at test %d", i))
 			assert.Equal(t, fmt.Sprintf("%x", test.root), tree.String(), fmt.Sprintf("incorrect string representation at test %d", i))
 		}

@@ -135,12 +135,13 @@ func (t *MerkleTree) GenerateMultiProof(data [][]byte) (*MultiProof, error) {
 // New creates a new Merkle tree using the provided raw data and default hash type.  Salting is not used.
 // data must contain at least one element for it to be valid.
 func New(data [][]byte) (*MerkleTree, error) {
-	return NewUsing(data, blake2b.New(), false)
+	return NewUsing(data, blake2b.New(), false, false)
 }
 
 // NewUsing creates a new Merkle tree using the provided raw data and supplied hash type.  Salting is used if requested.
+// If sorting is requested, branch hash generation will always put the lower hash value of its two children on the left.
 // data must contain at least one element for it to be valid.
-func NewUsing(data [][]byte, hash HashType, salt bool) (*MerkleTree, error) {
+func NewUsing(data [][]byte, hash HashType, salt bool, sortHashes bool) (*MerkleTree, error) {
 	if len(data) == 0 {
 		return nil, errors.New("tree must have at least 1 piece of data")
 	}
@@ -164,7 +165,13 @@ func NewUsing(data [][]byte, hash HashType, salt bool) (*MerkleTree, error) {
 	}
 	// Branches
 	for i := branchesLen - 1; i > 0; i-- {
-		nodes[i] = hash.Hash(nodes[i*2], nodes[i*2+1])
+		left := nodes[i*2]
+		right := nodes[i*2+1]
+		if sortHashes && bytes.Compare(left, right) == 1 {
+			nodes[i] = hash.Hash(right, left)
+		} else {
+			nodes[i] = hash.Hash(left, right)
+		}
 	}
 
 	tree := &MerkleTree{
