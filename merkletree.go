@@ -45,6 +45,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 
 	"github.com/wealdtech/go-merkletree/blake2b"
 )
@@ -59,6 +60,31 @@ type MerkleTree struct {
 	data [][]byte
 	// nodes are the leaf and branch nodes of the Merkle tree
 	nodes [][]byte
+}
+
+// A simple container for a Merkle Tree's data and the hashed leaf nodes
+type dataSortWrapper struct {
+	// The original data provided to the Merkle Tree upon generation
+	data [][]byte
+
+	// The hashed leaves for the original data
+	leaves [][]byte
+}
+
+// Get the length of the data in a wrapper
+func (w dataSortWrapper) Len() int {
+	return len(w.data)
+}
+
+// Swap indices of a wrapper, which swaps both the original data and the leaf nodes
+func (w dataSortWrapper) Swap(i, j int) {
+	w.data[i], w.data[j] = w.data[j], w.data[i]
+	w.leaves[i], w.leaves[j] = w.leaves[j], w.leaves[i]
+}
+
+// Does a comparison on the hashed leaf nodes at the given indices
+func (w dataSortWrapper) Less(i, j int) bool {
+	return bytes.Compare(w.leaves[i], w.leaves[j]) == -1
 }
 
 func (t *MerkleTree) indexOf(input []byte) (uint64, error) {
@@ -139,7 +165,9 @@ func New(data [][]byte) (*MerkleTree, error) {
 }
 
 // NewUsing creates a new Merkle tree using the provided raw data and supplied hash type.  Salting is used if requested.
-// If sorting is requested, branch hash generation will always put the lower hash value of its two children on the left.
+// If sortHashes is true, branch hash generation will always put the lower hash value of its two children on the left.
+// This will also sort the leaf nodes by their hashes prior to building the tree.
+// Note that the original `data` slice will be sorted as well.
 // data must contain at least one element for it to be valid.
 func NewUsing(data [][]byte, hash HashType, salt bool, sortHashes bool) (*MerkleTree, error) {
 	if len(data) == 0 {
@@ -159,6 +187,15 @@ func NewUsing(data [][]byte, hash HashType, salt bool, sortHashes bool) (*Merkle
 		} else {
 			nodes[i+branchesLen] = hash.Hash(data[i])
 		}
+	}
+	if sortHashes {
+		// Sort the indices by the hashed data values
+		leaves := nodes[branchesLen : branchesLen+len(data)]
+		wrapper := dataSortWrapper{
+			data:   data,
+			leaves: leaves,
+		}
+		sort.Sort(wrapper)
 	}
 	for i := len(data) + branchesLen; i < len(nodes); i++ {
 		nodes[i] = make([]byte, hash.HashLength())
