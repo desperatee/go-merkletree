@@ -1,4 +1,4 @@
-module github.com/wealdtech/go-merkletree
+module github.com/desperatee/go-merkletree
 
 go 1.17
 
